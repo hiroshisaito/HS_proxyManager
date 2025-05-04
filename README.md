@@ -33,6 +33,3 @@ Through a ScriptUI panel, it allows you to easily generate proxies at multiple r
 [MIT License](LICENSE)
 *(You may need to create a separate LICENSE file containing the actual MIT license text)*
 
-## Author
-
-Hiroshi Saito
