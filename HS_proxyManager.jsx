@@ -50,7 +50,6 @@ hs_proxyManager.normalizePrefPath = function(pathText) {
 
 hs_proxyManager.loadRenderPref = function(prefFile) {
     var pref = new Object();
-    pref.mp = null;
     pref.sound = null;
     pref.notrend = null;
     pref.om = null;
@@ -70,9 +69,7 @@ hs_proxyManager.loadRenderPref = function(prefFile) {
         var key = hs_proxyManager.trim(prefLine.substring(0, eqIndex));
         var value = hs_proxyManager.trim(prefLine.substring(eqIndex + 1)).replace(/;$/, "");
 
-        if(key === "mp") {
-            pref.mp = (value === "true");
-        } else if(key === "sound") {
+        if(key === "sound") {
             pref.sound = (value === "true");
         } else if(key === "notrend") {
             pref.notrend = (value === "true");
@@ -88,7 +85,6 @@ hs_proxyManager.loadRenderPref = function(prefFile) {
 
 
 hs_proxyManager.applyRenderPref = function(pref, settings) {
-    if(pref.mp !== null) { settings.mp = pref.mp; }
     if(pref.sound !== null) { settings.sound = pref.sound; }
     if(pref.notrend !== null) { settings.notrend = pref.notrend; }
     if(pref.om !== null) { settings.om = pref.om; }
@@ -479,15 +475,14 @@ function proxy_canHave(item) {
 //   This window is setting for rendering output module and some other reindering stuff.
 //   After Effects should be locked while this window appears.
 //
-// hs_proxyManager.proxyRender(outputFolder, ump, usound, uom, unotrend)
+// hs_proxyManager.proxyRender(outputFolder, usound, uom, unotrend)
 // arguments:
 // outputFolder: Proxy-Root Foder. (Folder)
-// ump: Enable/Disable Multi-Processor option. (Boolean)
 // usound:Enable/Disable Sound option. (Boolean)
 // uom:Default rendering output mobule index. (Int)
 // unotrend: Enable/Disable render later option. (Boolean)
 
-hs_proxyManager.proxyRender = function(outputFolder, ump, usound, uom, unotrend) {
+hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
 
     if(app.project.renderQueue.numItems < 1){
         alert("There's no item in render queue.");
@@ -522,11 +517,9 @@ hs_proxyManager.proxyRender = function(outputFolder, ump, usound, uom, unotrend)
     renderWin.OMList = renderWin.add('dropdownlist', [125, 15, 380, 35],rqOMT);
     renderWin.OMList.selection =  uom;
 
-    renderWin.mp =  renderWin.add('checkbox', [125, 45, 380, 65], 'Enable Multiprocessing');
-    renderWin.mp.value = ump;
-    renderWin.sound =  renderWin.add('checkbox', [125, 70, 380, 90], 'Sound Option');
+    renderWin.sound =  renderWin.add('checkbox', [125, 45, 380, 65], 'Sound Option');
     renderWin.sound.value = usound;
-    renderWin.notrend =  renderWin.add('checkbox', [125, 95, 380, 115], 'Render later');
+    renderWin.notrend =  renderWin.add('checkbox', [125, 70, 380, 90], 'Render later');
     renderWin.notrend.value = unotrend;
 
     renderWin.OMDesc = renderWin.add('statictext', [20, 130, 380, 310],"Choose an output module and press 'OK' button.\nIf you press 'OK' or return key, background rendering would start. You may continue to work on After Efefcts while background rendering is running.\n\nNOTICE: You can not modify the output module setting in this panel. If you would like to do that, press 'Cancel' button and back to After Effects to save your output module template(s) in advance.\n\n If 'Not render immediately' is checked, proxy rendering won't start, just export project file for proxy-rendering. (This option might be useful to use render farm.) ", {multiline: true})
@@ -598,7 +591,7 @@ hs_proxyManager.proxyRender = function(outputFolder, ump, usound, uom, unotrend)
                                     var batFilePath;
 
                                     // hs_renderCore.aebatMakeCommand() --> HS_renderCore.jsx
-                                    var proxyRenderTxt = hs_renderCore.aebatMakeCommand(renderWin.sound.value, 80, 45, 1, renderWin.mp.value, project2go);
+                                    var proxyRenderTxt = hs_renderCore.aebatMakeCommand(renderWin.sound.value, 80, 45, 1, false, project2go);
 
                                     if(proxyRenderTxt === null) { return; }
 
@@ -620,7 +613,7 @@ hs_proxyManager.proxyRender = function(outputFolder, ump, usound, uom, unotrend)
     renderWin.SAVEPREF.onClick = function() {
         var saveDefaultCheck = confirm("Are you going to save current settings as default ?");
         if(saveDefaultCheck === true) {
-            var prefWriteTxt = "mp = " + renderWin.mp.value + ";\n" + "sound = " + renderWin.sound.value + ";\n" + "notrend = " + renderWin.notrend.value + ";\n" + "om = " + renderWin.OMList.selection.index + ";\n" ;
+            var prefWriteTxt = "sound = " + renderWin.sound.value + ";\n" + "notrend = " + renderWin.notrend.value + ";\n" + "om = " + renderWin.OMList.selection.index + ";\n" ;
             hsUtil.savePref(hs_proxyManager.prefFile, hs_proxyManager.prefFolder, prefWriteTxt);
             alert("Current settings were saved as default.");
         }
@@ -639,7 +632,6 @@ hs_proxyManager.proxyRender = function(outputFolder, ump, usound, uom, unotrend)
 hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     // Pref default
-    var mp = false;
     var sound = true;
     var om = 0;
     var proxyDefaultPath = null;
@@ -650,12 +642,10 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
     var proxyPrefTxt = hsUtil.loadPref(hs_proxyManager.defaultProxyPath);
     var renderPref = hs_proxyManager.loadRenderPref(hs_proxyManager.prefFile);
     var renderSettings = new Object();
-    renderSettings.mp = mp;
     renderSettings.sound = sound;
     renderSettings.notrend = notrend;
     renderSettings.om = om;
     renderSettings = hs_proxyManager.applyRenderPref(renderPref, renderSettings);
-    mp = renderSettings.mp;
     sound = renderSettings.sound;
     notrend = renderSettings.notrend;
     om = renderSettings.om;
@@ -850,12 +840,10 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         //load Pref file (again).
         var currentRenderPref = hs_proxyManager.loadRenderPref(hs_proxyManager.prefFile);
         var currentRenderSettings = new Object();
-        currentRenderSettings.mp = mp;
         currentRenderSettings.sound = sound;
         currentRenderSettings.notrend = notrend;
         currentRenderSettings.om = om;
         currentRenderSettings = hs_proxyManager.applyRenderPref(currentRenderPref, currentRenderSettings);
-        mp = currentRenderSettings.mp;
         sound = currentRenderSettings.sound;
         notrend = currentRenderSettings.notrend;
         om = currentRenderSettings.om;
@@ -1022,7 +1010,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
                 if(pRenderFlag === true) {
 
-                    hs_proxyManager.proxyRender(proxyOutputFolder,mp, sound, om, notrend);
+                    hs_proxyManager.proxyRender(proxyOutputFolder, sound, om, notrend);
 
                 } else {
                     alert("There's no selected item or Current selected items could not have proxies.");

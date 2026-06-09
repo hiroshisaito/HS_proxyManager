@@ -20,7 +20,7 @@ Through a ScriptUI panel, it allows you to easily generate proxies at multiple r
     * Allows setting and changing the alpha mode interpretation for proxies (Auto/Straight/Premultiplied/Ignore).
 * **Configuration:**
     * Set and save the default path for the proxy folder.
-    * Configure render settings such as Output Module, multiprocessing, and audio output.
+    * Configure render settings such as Output Module and audio output.
     * Settings are saved to a preference file.
 
 ## Requirements

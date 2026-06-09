@@ -167,13 +167,8 @@ hs_renderCore.aebatMakeCommand = function(sound, memusage, imgcache, priority, m
     //var cmdPath = hs_renderCore.aerenderPath();
     //alert(hs_aebatFile);
 
-    if(parseFloat(app.version) >= 8 && mpOption === true) {
-		mp = "-mp";
-	} else if(parseFloat(app.version) >= 8 && mpOption === false) {
-		mp = "";
-	} else {
-		mp ="";
-	}
+    // Disabled because legacy aerender multiprocessing can conflict with modern MfR.
+	mp = "";
 
 
 	if(hsUtil.osType() === "Mac"){
