@@ -1041,7 +1041,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 if(parseFloat(app.version) >= 8) {
     app.project.renderQueue.templates
 
-        hs_proxyManager.version = "1.0.0_rc1";
+        hs_proxyManager.version = "1.1";
         hs_proxyManager.folderName = "(_HS_proxy_)";
 
         // Pref folder

@@ -1,5 +1,7 @@
 # HS_ProxyManager for Adobe After Effects
 
+Current version: **1.1**
+
 ## Overview
 
 `HS_ProxyManager.jsx` is an ExtendScript for Adobe After Effects designed to streamline the creation, management, and application of proxy files within your projects.
