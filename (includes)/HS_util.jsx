@@ -77,7 +77,7 @@ hsUtil.getDateStamp = function(sep) {
 }
 
 
-// Today, use $.locale attribute instead of this method.
+// Prefer $.locale for new code.
 hsUtil.chkJPN = function() {
 
 	if(app.language == 1613) {
@@ -149,7 +149,7 @@ hsUtil.savePref = function(file, folder, confTxt) {
         }
     }
 
-    var opened = file.open("w");   // "w" truncates, so there is no need to remove first.
+    var opened = file.open("w");   // "w" truncates existing content.
     if(!opened){
         return null;
     }

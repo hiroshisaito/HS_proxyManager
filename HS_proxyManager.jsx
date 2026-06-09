@@ -135,13 +135,13 @@ hs_proxyManager.templateExists = function(templateList, templateName) {
 
 
 // hs_proxyManager.checkProxyFolder(path)
-// Check the root proxy folder for current project.
-// This method returns Folder Object.
+// Resolve the proxy root folder for the current project.
+// Returns a Folder object.
 //
-// arguments:
-// path : Full path to proxy root folder. (string)
-// onlycheck (Option): If you like to use this method to check whether the folder already exists. (Boolean)
-// useCurrentFile (Option): If true, prefer the current project's .proxy file. (Boolean)
+// Arguments:
+// path: Proxy root path. (string)
+// onlycheck: If true, do not create missing folders. (Boolean)
+// useCurrentFile: If true, prefer the current project's .proxy file. (Boolean)
 
 hs_proxyManager.checkProxyFolder = function(path, onlycheck, useCurrentFile){
     if(app.project.file !== null){
@@ -152,14 +152,13 @@ hs_proxyManager.checkProxyFolder = function(path, onlycheck, useCurrentFile){
         var proxyRoot =null;
 
 
-        //Define the proxy folder setting file.
+        // Project proxy setting file.
         var projectProxySettingFile = new File(projectRoot.fsName + "/" + app.project.file.name + ".proxy");
 
-        //Seek proxy root folder.
-        // The priority is;
-        //  1. dot proxy file and read that path.
-        //  2. check default path in pref file.
-        //  3. if the default path in pref file was 'null' or there was NOT being pref file, same as project(aep) root path.
+        // Resolve the proxy root in this order:
+        //  1. Current project's .proxy file.
+        //  2. Default path from preferences.
+        //  3. Project folder.
 
         if(projectProxySettingFile.exists && (useCurrentFile)){
             proxyRootPath = hs_proxyManager.normalizePrefPath(hsUtil.loadPref(projectProxySettingFile));
@@ -191,9 +190,7 @@ hs_proxyManager.checkProxyFolder = function(path, onlycheck, useCurrentFile){
                         proxyRoot.parent.create();
                     }
                     created = proxyRoot.create();
-                } catch(e) {
-                    alert(e);
-                }
+                } catch(e) {}
 
                 if(!created || !proxyRoot.exists){
                     alert("Could not create proxy folder:\n" + proxyRoot.fsName);
@@ -213,28 +210,22 @@ hs_proxyManager.checkProxyFolder = function(path, onlycheck, useCurrentFile){
 
 
 
-// folder must be Folder item but pFolderName must be string.
-// Returns Folder item object.
+// Returns a unique Folder path based on pFolderName.
 
 hs_proxyManager.chkFolderNameExists = function(folder, pFolderName){
-    //alert("hs_chkFolderNameExists:" + folder.exists);
     if(!folder.exists) {
 		return folder;
 	} else {
 		for(var exNum = 1; (Folder(folder.parent.fsName+"/"+pFolderName+"_"+exNum).exists); exNum++) {};
 		var newPFolder = new Folder(folder.parent.fsName+"/"+pFolderName+"_"+exNum);
-        //alert(newPFolder.fsName)
         return newPFolder;
 	}
 }
 
 
 
-// Check item folder.
-// (subfolders of proxy Folder)
-//
 // hs_proxyManager.checkProxyResFolder(path)
-// path: Fullpath to proxy folder. (string)
+// Ensure a proxy subfolder exists.
 
 hs_proxyManager.checkProxyResFolder= function(path) {
 
@@ -269,8 +260,7 @@ hs_proxyManager.removeFolderRecursive = function(folder) {
 
 
 
-//Remove Proxy Resolution Folders
-//path: Fullpath to resolution folders (1,2,3 and 4) in proxy folder. (string)
+// Remove a proxy resolution folder.
 
 hs_proxyManager.removeResolutionFolder = function(path) {
 
@@ -288,7 +278,7 @@ hs_proxyManager.removeResolutionFolder = function(path) {
 
 
 // Apply an alpha interpretation mode to a proxy source.
-// alpha: 0=guessAlphaMode, 1=Straight, 2=Premultiplied, 3=Ignore
+// alpha: 0=Auto, 1=Straight, 2=Premultiplied, 3=Ignore
 hs_proxyManager.applyAlphaMode = function(proxySource, alpha){
     if(proxySource === null || !proxySource.hasAlpha){ return; }
     if (alpha === 0) { proxySource.guessAlphaMode(); }
@@ -337,7 +327,7 @@ hs_proxyManager.fixPSDLayers = function(layerName) {
 
 // hs_proxyManager.setProxy(val, alpha, path)
 //
-// arguments:
+// Arguments:
 //
 // val: Proxy resolution (Int)
 //      1: 100%
@@ -345,96 +335,97 @@ hs_proxyManager.fixPSDLayers = function(layerName) {
 //      3: 33%
 //      4: 25%
 //
-// alpha: Aplha mode.(Int)
+// alpha: Alpha mode. (Int)
 //      0:guessAlphaMode()
 //      1:AlphaMode.STRAIGHT
 //      2:AlphaMode.PREMULTIPLIED
 //      3:AlphaMode.IGNORE
 //
-// path: Path to proxy folder(string)
+// path: Proxy folder path. (string)
+// applyAll: If true, apply to every proxyable project item. (Boolean)
 //
 
-hs_proxyManager.setProxy = function(val, alpha, path){
+hs_proxyManager.setProxy = function(val, alpha, path, applyAll){
 
-    //alert(sel);
     var proxyFolderItems;
+    var proxyRootFolder = null;
+
+    applyAll = (applyAll === true);
+
+    if(val !== 0){
+        proxyRootFolder = hs_proxyManager.checkProxyFolder(path, true, true);
+        if(proxyRootFolder){
+            proxyFolderItems = Folder(proxyRootFolder.fsName).getFiles();
+        } else {
+            proxyFolderItems = null;
+        }
+
+        if(proxyFolderItems === null){
+            return;
+        }
+    }
 
     for(var i=1, itemsLength =app.project.numItems ;i<=itemsLength; i++){
 
         var curItem = app.project.item(i);
 
-        if(curItem.selected && hs_proxyManager.isProxyableItem(curItem)){
+        if((applyAll || curItem.selected) && hs_proxyManager.isProxyableItem(curItem)){
             if(val === 0){ curItem.setProxyToNone(); continue; }
 
-            var proxyRootFolder = hs_proxyManager.checkProxyFolder(path, true, true);
-            if(proxyRootFolder){
-                proxyFolderItems = Folder(proxyRootFolder.fsName).getFiles();
-            } else {
-                proxyFolderItems = null;
-            }
+            var itemProxyFolder = Folder(proxyRootFolder.fsName + "/"+ curItem.id);
 
-            if(proxyFolderItems === null){
-                return;
-            } else {
+            if(itemProxyFolder.exists){
 
-                var itemProxyFolder = Folder(proxyRootFolder.fsName + "/"+ curItem.id);
+                var proxyResFolder = Folder(itemProxyFolder.fsName+"/"+val);
 
-                if(itemProxyFolder.exists){
+                if(!proxyResFolder.exists) { continue; }
 
-                    var proxyResFolder = Folder(itemProxyFolder.fsName+"/"+val);
+                var proxyFolderItems = proxyResFolder.getFiles();
+                var proxyFiles = new Array();
 
-                    if(!proxyResFolder.exists) { continue; }
-
-                    var proxyFolderItems = proxyResFolder.getFiles();
-                    var proxyFiles = new Array();
-
-                    for(var pf = 0; pf < proxyFolderItems.length; pf++){
-                        if(proxyFolderItems[pf] instanceof File && proxyFolderItems[pf].name.match(/^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i)){
-                            proxyFolderItems[pf].remove();
-                        } else if(proxyFolderItems[pf] instanceof File) {
-                            proxyFiles.push(proxyFolderItems[pf]);
-                        }
+                for(var pf = 0; pf < proxyFolderItems.length; pf++){
+                    if(proxyFolderItems[pf] instanceof File && proxyFolderItems[pf].name.match(/^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i)){
+                        proxyFolderItems[pf].remove();
+                    } else if(proxyFolderItems[pf] instanceof File) {
+                        proxyFiles.push(proxyFolderItems[pf]);
                     }
+                }
 
-                    proxyFiles.sort(function(a, b) {
-                        var aName = a.name.toLowerCase();
-                        var bName = b.name.toLowerCase();
-                        if(aName < bName) { return -1; }
-                        if(aName > bName) { return 1; }
-                        return 0;
-                    });
+                proxyFiles.sort(function(a, b) {
+                    var aName = a.name.toLowerCase();
+                    var bName = b.name.toLowerCase();
+                    if(aName < bName) { return -1; }
+                    if(aName > bName) { return 1; }
+                    return 0;
+                });
 
-                    if(proxyFiles.length > 1) {
-                        //Set Proxy
+                if(proxyFiles.length > 1) {
+                    // Set proxy.
 
-                        curItem.setProxyWithSequence(File(proxyFiles[0]),false);
+                    curItem.setProxyWithSequence(File(proxyFiles[0]),false);
 
-                        //Fix frame rate
-                        hs_proxyManager.applyProxyFrameRate(curItem);
+                    // Match frame rate.
+                    hs_proxyManager.applyProxyFrameRate(curItem);
 
-                        //Set Alpha mode
-                        //(if the proxy has apha)
-                        hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
-
-
-
-                    } else if(proxyFiles.length === 1){
-                        //Set Proxy
-                        curItem.setProxy(File(proxyFiles[0]));
-
-                        //Fix frame rate
-                        hs_proxyManager.applyProxyFrameRate(curItem);
-
-                        //Set Alpha mode
-                        //(if the proxy has apha)
-
-                        hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
+                    // Set alpha mode when available.
+                    hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
 
 
-                    } else {
-                        ;
-                    }
 
+                } else if(proxyFiles.length === 1){
+                    // Set proxy.
+                    curItem.setProxy(File(proxyFiles[0]));
+
+                    // Match frame rate.
+                    hs_proxyManager.applyProxyFrameRate(curItem);
+
+                    // Set alpha mode when available.
+
+                    hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
+
+
+                } else {
+                    ;
                 }
             }
 
@@ -445,47 +436,20 @@ hs_proxyManager.setProxy = function(val, alpha, path){
 }
 
 
-/*
-hs_proxyManager.applyTemplate = function(item) {
-    var cq = [];
-    pQItem.applyTemplate("[HS_PROXY_1/1]")
-}
-*/
-
-/*
-//proxy_canHave() is a function for devlopment and debugging.
-//Not in use current version but still be here just in case.
-
-
-function proxy_canHave(item) {
-    if(item instanceof CompItem || (item.mainSource instanceof FileSource && item.width > 0)){
-        return true;
-    } else {
-        return false;
-    }
-}
-*/
-
-
-
-
-
-
-// Rendering Dialog:
-//   This window is setting for rendering output module and some other reindering stuff.
-//   After Effects should be locked while this window appears.
+// Rendering dialog.
+// Sets the output module and render options.
 //
 // hs_proxyManager.proxyRender(outputFolder, usound, uom, unotrend)
-// arguments:
-// outputFolder: Proxy-Root Foder. (Folder)
-// usound:Enable/Disable Sound option. (Boolean)
-// uom:Default rendering output mobule index. (Int)
-// unotrend: Enable/Disable render later option. (Boolean)
+// Arguments:
+// outputFolder: Proxy root folder. (Folder)
+// usound: Enable audio. (Boolean)
+// uom: Default output module index. (Int)
+// unotrend: Save the render project without starting aerender. (Boolean)
 
 hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
 
     if(app.project.renderQueue.numItems < 1){
-        alert("There's no item in render queue.");
+        alert("No items are in the render queue.");
         return false;
     }
 
@@ -495,13 +459,13 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
 
     for(var rt = 0; rt < requiredProxyTemplates.length; rt++){
         if(!hs_proxyManager.templateExists(rqTemplates, requiredProxyTemplates[rt])){
-            alert("Missing render settings template:\n" + requiredProxyTemplates[rt] + "\nImport HS_proxyManager.ars and try again.");
+            alert("Missing render settings template:\n" + requiredProxyTemplates[rt] + "\nImport HS_proxyManager.ars, then try again.");
             return false;
         }
     }
 
     if(rqOMT.length < 1){
-        alert("There's no output module template.");
+        alert("No output module templates are available.");
         return false;
     }
 
@@ -517,16 +481,16 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
     renderWin.OMList = renderWin.add('dropdownlist', [125, 15, 380, 35],rqOMT);
     renderWin.OMList.selection =  uom;
 
-    renderWin.sound =  renderWin.add('checkbox', [125, 45, 380, 65], 'Sound Option');
+    renderWin.sound =  renderWin.add('checkbox', [125, 45, 380, 65], 'Include Audio');
     renderWin.sound.value = usound;
-    renderWin.notrend =  renderWin.add('checkbox', [125, 70, 380, 90], 'Render later');
+    renderWin.notrend =  renderWin.add('checkbox', [125, 70, 380, 90], 'Queue Only');
     renderWin.notrend.value = unotrend;
 
-    renderWin.OMDesc = renderWin.add('statictext', [20, 130, 380, 310],"Choose an output module and press 'OK' button.\nIf you press 'OK' or return key, background rendering would start. You may continue to work on After Efefcts while background rendering is running.\n\nNOTICE: You can not modify the output module setting in this panel. If you would like to do that, press 'Cancel' button and back to After Effects to save your output module template(s) in advance.\n\n If 'Not render immediately' is checked, proxy rendering won't start, just export project file for proxy-rendering. (This option might be useful to use render farm.) ", {multiline: true})
+    renderWin.OMDesc = renderWin.add('statictext', [20, 130, 380, 310],"Choose an output module, then click OK.\n\nOK prepares the render queue and starts background rendering. You can keep working in After Effects.\n\nTo edit output module templates, cancel this dialog and update them in After Effects first.\n\nIf Queue Only is checked, the script saves the proxy render project but does not start aerender.", {multiline: true})
 
     renderWin.OK = renderWin.add('button', [280, 330, 380, 350], 'OK', {name:'ok'});
     renderWin.CANCEL = renderWin.add('button', [170,330,270,350], 'Cancel', {name:'cancel'});
-    renderWin.SAVEPREF = renderWin.add('button', [20, 330, 150, 350], 'Save As Default');
+    renderWin.SAVEPREF = renderWin.add('button', [20, 330, 150, 350], 'Save Defaults');
 
     renderWin.OK.onClick =  function(){
                                 for (var i = 1, RqLength= app.project.renderQueue.numItems; i <= RqLength; i++) {
@@ -554,30 +518,6 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
                                     curQItem.applyTemplate('[HS_PROXY_1/'+omNameSplit[1]+']');
 
 
-                                    /* version 0.8: Currently disable skip 1/1 option due to PostRenderAction issue
-                                    ==========================================
-                                    // Skip '1/1' resolution rendering option
-                                    if(renderWin.OMBtn.value == true && omNameSplit[1] == "1"){
-                                          curQItem.render = false;
-                                    }
-
-                                    if(renderWin.OMBtn.value == false && omNameSplit[1] == "1"){
-                                          curQItem.outputModule(1).postRenderAction = PostRenderAction.IMPORT_AND_REPLACE_USAGE;
-
-                                    } else if(renderWin.OMBtn.value == true && omNameSplit[1] == "2"){
-                                          curQItem.outputModule(1).postRenderAction = PostRenderAction.IMPORT_AND_REPLACE_USAGE;
-                                    }
-
-                                    if(renderWin.OMBtn.value == true && omNameSplit[1] != "1" && omNameSplit[1] != "2"){
-
-                                          curQItem.comp.width = curQItem.comp.width/2;
-                                          curQItem.comp.height = curQItem.comp.height/2;
-                                          curQItem.comp.layers[1].property("position").setValue([curQItem.comp.width/2,curQItem.comp.height/2])
-                                    }
-                                    ==========================================
-                                    */
-
-
                                     if(omNameSplit[1] === "1"){
                                           curQItem.outputModule(1).postRenderAction = PostRenderAction.IMPORT_AND_REPLACE_USAGE;
                                     }
@@ -590,7 +530,6 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
                                     var project2go = app.project.file;
                                     var batFilePath;
 
-                                    // hs_renderCore.aebatMakeCommand() --> HS_renderCore.jsx
                                     var proxyRenderTxt = hs_renderCore.aebatMakeCommand(renderWin.sound.value, 80, 45, 1, false, project2go);
 
                                     if(proxyRenderTxt === null) { return; }
@@ -598,10 +537,10 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
 
                                     if(hsUtil.osType() === "Mac") {
                                         batFilePath = project2go.parent.fsName + "/" + "HS_proxyManager"+ ".term";
-                                        hs_renderCore.aebat_fileExport(batFilePath, proxyRenderTxt, true, true) // HS_renderCore.jsx
+                                        hs_renderCore.aebat_fileExport(batFilePath, proxyRenderTxt, true, true)
                                     } else if (hsUtil.osType() === "Win") {
                                         batFilePath = project2go.parent.fsName + "/" + "HS_proxyManager" + ".bat";
-                                        hs_renderCore.aebat_fileExport(batFilePath,proxyRenderTxt, true, false) // HS_renderCore.jsx
+                                        hs_renderCore.aebat_fileExport(batFilePath,proxyRenderTxt, true, false)
                                     }
                                 }
 
@@ -611,11 +550,11 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
     renderWin.CANCEL.onClick = function() { this.parent.close();}
 
     renderWin.SAVEPREF.onClick = function() {
-        var saveDefaultCheck = confirm("Are you going to save current settings as default ?");
+        var saveDefaultCheck = confirm("Save these settings as defaults?");
         if(saveDefaultCheck === true) {
             var prefWriteTxt = "sound = " + renderWin.sound.value + ";\n" + "notrend = " + renderWin.notrend.value + ";\n" + "om = " + renderWin.OMList.selection.index + ";\n" ;
             hsUtil.savePref(hs_proxyManager.prefFile, hs_proxyManager.prefFolder, prefWriteTxt);
-            alert("Current settings were saved as default.");
+            alert("Default settings saved.");
         }
     }
 
@@ -625,20 +564,18 @@ hs_proxyManager.proxyRender = function(outputFolder, usound, uom, unotrend) {
 
 
 
-// HS_ProxyManager_UI:
-// (ScriptUI Panel function)
-// Note that the script ui panel is called from main.
+// Main ScriptUI panel.
 
 hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
-    // Pref default
+    // Preference defaults.
     var sound = true;
     var om = 0;
     var proxyDefaultPath = null;
     var notrend = false;
 
 
-    //Override pref setting from pref file.
+    // Load saved preferences.
     var proxyPrefTxt = hsUtil.loadPref(hs_proxyManager.defaultProxyPath);
     var renderPref = hs_proxyManager.loadRenderPref(hs_proxyManager.prefFile);
     var renderSettings = new Object();
@@ -655,7 +592,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         proxyDefaultPath = hs_proxyManager.normalizePrefPath(proxyPrefTxt);
     }
 
-    //Check again proxyDefaltPath...
+    // Validate the saved proxy path.
 
     if(proxyDefaultPath !== null) {
 
@@ -676,6 +613,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     var hs_radioButtonUI = true;
     var hs_alphaSelection = 0;
+    var HS_ProxyUIApplyAll = HS_ProxyWin.add('checkbox', [5, 88, 170, 108], 'Apply to All Items');
 
         HS_ProxyWin.btnPanel = HS_ProxyWin.add('panel',[5, 35, 340, 85], 'Proxy Alpha Mode:');
         HS_ProxyWin.btnPanel.btn1 = HS_ProxyWin.btnPanel.add('radiobutton', [10, 10, 90, 35], 'Auto');
@@ -699,7 +637,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                                                        hs_proxyManager.changeProxyAlphaMode(hs_alphaSelection);}
 
 
-        HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 110, 340, 220], 'Proxy-Set Folder Setting:');
+        HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 110, 340, 220], 'Proxy Folder:');
 
         if(proxyDefaultPath === null){
             HS_ProxyWin.folderSetting.pathText = './(Same as project file.)';
@@ -719,15 +657,15 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     // Set proxy
 
-    HS_ProxyUIBtn_1.onClick = function() {hs_proxyManager.setProxy(1, hs_alphaSelection, proxyDefaultPath);}
-    HS_ProxyUIBtn_2.onClick = function() {hs_proxyManager.setProxy(2, hs_alphaSelection, proxyDefaultPath);}
-    HS_ProxyUIBtn_3.onClick = function() {hs_proxyManager.setProxy(3, hs_alphaSelection, proxyDefaultPath);}
-    HS_ProxyUIBtn_4.onClick = function() {hs_proxyManager.setProxy(4, hs_alphaSelection, proxyDefaultPath);}
-    HS_ProxyUIBtn_0.onClick = function() {hs_proxyManager.setProxy(0, hs_alphaSelection, proxyDefaultPath);}
+    HS_ProxyUIBtn_1.onClick = function() {hs_proxyManager.setProxy(1, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_2.onClick = function() {hs_proxyManager.setProxy(2, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_3.onClick = function() {hs_proxyManager.setProxy(3, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_4.onClick = function() {hs_proxyManager.setProxy(4, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_0.onClick = function() {hs_proxyManager.setProxy(0, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
 
 
 
-    // Change Proxy-set Path (Press "..." button)
+    // Choose a proxy root.
 
     HS_ProxyWin.folderSetting.button1.onClick = function() {
 
@@ -740,7 +678,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
             trial.create();
 
             if(!trial.exists) {
-                alert('Could not create folder. Check permission and try again');
+                alert('Could not create the folder. Check permissions and try again.');
                 catchErr = true;
             }
 
@@ -759,7 +697,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         }
     }
 
-    // Change Proxy-Set Path to project's root (Same as project)
+    // Use the project folder as the proxy root.
     HS_ProxyWin.folderSetting.button2.onClick = function(){
 
             proxyDefaultPath = null;
@@ -768,7 +706,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
     }
 
 
-    // Save default proxy-set folder
+    // Save the default proxy root.
     HS_ProxyWin.folderSetting.button3.onClick = function(){
 
             var prefTextContent = (proxyDefaultPath === null) ? "null" : proxyDefaultPath;
@@ -777,12 +715,12 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
             if(canSavePref !== null) {
                 if(proxyDefaultPath === null) {
-                    alert("Proxy-set folder will be placed in same direcoty of the project file.");
+                    alert("Proxy files will be saved next to the project file.");
                 } else {
-                    alert("Changed default proxy-set folder path to:\n" + proxyDefaultPath + "\n");
+                    alert("Default proxy folder changed to:\n" + proxyDefaultPath);
                 }
             } else {
-                 alert("Can't save preference. Check the permission.");
+                 alert("Could not save preferences. Check permissions.");
             }
     }
 
@@ -791,7 +729,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
         var newDefultPath = proxyDefaultPath;
 
-        //Only check option is 'true'.
+        // Check only; do not create folders here.
         var folderExists = (hs_proxyManager.checkProxyFolder(proxyDefaultPath, true))
         var saveUntitled;
 
@@ -802,7 +740,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         }
 
         if(app.project.file === null && saveUntitled === null){
-            alert("This project file does not exist. Save this project and try again.");
+            alert("Save this project, then try again.");
         }
 
 
@@ -812,7 +750,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
             var proxyOutputFolder = hs_proxyManager.checkProxyFolder(newDefultPath, false, false);
             if(proxyOutputFolder === null) { return; }
 
-            var confirmDialog = confirm("All proxies in this project will be reset. Would you really execute?", true);
+            var confirmDialog = confirm("Reset all proxies in this project?", true);
 
             if(confirmDialog === true){
 
@@ -825,7 +763,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                 }
 
                 if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder) === null) {
-                    alert("Can't save current project proxy setting. Check the permission.");
+                    alert("Could not save this project's proxy setting. Check permissions.");
                 }
            }
 
@@ -837,7 +775,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     HS_ProxyUIBtn_make.onClick = function() {
 
-        //load Pref file (again).
+        // Reload render preferences.
         var currentRenderPref = hs_proxyManager.loadRenderPref(hs_proxyManager.prefFile);
         var currentRenderSettings = new Object();
         currentRenderSettings.sound = sound;
@@ -850,14 +788,14 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
 		if(app.project.file === null) {
 
-			alert("This project is never saved before:");
+			alert("Save this project before creating proxies.");
 			var saveFlag;
 			try { app.project.save(); saveFlag = (app.project.file !== null); }
 			catch(e) { saveFlag = false; }
 
 		} else {
 
-            var overWriteFlag = confirm("Save current project before creating proxies:\n Overwrite current project?");
+            var overWriteFlag = confirm("Save the current project before creating proxies?\nOverwrite the project file?");
             var saveFlag;
 
             if(overWriteFlag === true) {
@@ -881,7 +819,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
             if(proxyOutputFolder === null) { return; }
 
             if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder) === null) {
-                alert("Can't save current project proxy setting. Check the permission.");
+                alert("Could not save this project's proxy setting. Check permissions.");
                 return;
             }
 
@@ -904,12 +842,12 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                         alert("Could not create proxy temp folder:\n" + proxyProjectFolder.fsName);
                         return;
                     }
-                } // Create "(proxy_temp)" Folder.
+                } // Create "(proxy_temp)".
 
 
                 var proxyTempProject = new File(proxyProjectFolder.fsName + "/[proxy]" + app.project.file.name);
 
-                // Turn off selected proxies only in the temporary render project.
+                // Disable selected proxies only in the temporary render project.
                 for(var sp = 0, selLength = app.project.selection.length; sp < selLength; sp++){
                     var selectedItem = app.project.selection[sp];
                     if(hs_proxyManager.isProxyableItem(selectedItem) && selectedItem.proxySource !== null){
@@ -935,7 +873,6 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
                 if(qi != null && qi > 0) {
                     for (var i = 0; i < qi; i++) {
-                        //alert(qi - i);
                         app.project.renderQueue.item(1).remove();
                     }
                 }
@@ -946,7 +883,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                 }
 
 
-                // Build Composition for proxies and add them to render queue.
+                // Build proxy comps and add them to the render queue.
                 for(var nn=0; nn < pLength; nn++){
 
                     if (pArray[nn].selected && hs_proxyManager.isRenderableProxyItem(pArray[nn])) {
@@ -958,10 +895,9 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
                     if (pAddFlag == true) {
 
-                        // Make new comps for rendering
-                        // Comp1 100% Scaling
+                        // Create proxy render comps.
 
-                        if(!(pArray[nn] instanceof CompItem) && pArray[nn].mainSource.isStill) { //If the fottage source is still Image;
+                        if(!(pArray[nn] instanceof CompItem) && pArray[nn].mainSource.isStill) { // Still footage.
 
                             pCompDuration = 1/1;
                             pCompFrameRate = 1;
@@ -973,13 +909,11 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
                         }
 
-                        // Begin make new comp for rendeing proxies.
+                        // Sanitize the source name for generated comps.
                         pArray[nn].name = hs_proxyManager.fixPSDLayers (pArray[nn].name);
 
-                        // Build nested comps for each proxy resolution (1=100% .. 4=25%).
-                        // Each comp nests the previous one; the [HS_PROXY_1/n] templates do
-                        // the actual scaling. Output paths are set to the Desktop as a dummy
-                        // because a 'Not yet specified' output would error when queued.
+                        // Nest each proxy comp; [HS_PROXY_1/n] templates handle scaling.
+                        // Desktop paths are placeholders to avoid queue errors.
                         var pPrevLayer = pArray[nn];
                         for(var pr = 1; pr <= 4; pr++){
 
@@ -1013,7 +947,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                     hs_proxyManager.proxyRender(proxyOutputFolder, sound, om, notrend);
 
                 } else {
-                    alert("There's no selected item or Current selected items could not have proxies.");
+                    alert("Select footage or comps that can use proxies.");
                 }
 
                 app.project.save();
@@ -1036,8 +970,6 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
 
 
-//(So, guess what? WHAT? WHAT? WHAT? WHAT? WHAT?)
-
 if(parseFloat(app.version) >= 8) {
     app.project.renderQueue.templates
 
@@ -1049,23 +981,23 @@ if(parseFloat(app.version) >= 8) {
         hs_proxyManager.prefFolderHome = new Folder(Folder.myDocuments.fsName + "/" +"(hs_pref)");
 
         if(hs_proxyManager.prefFolderHome.exists){
-            hs_proxyManager.prefFolder = hs_proxyManager.prefFolderHome; //Check user document folder
+            hs_proxyManager.prefFolder = hs_proxyManager.prefFolderHome; // Use the Documents preference folder.
         } else {
             hs_proxyManager.prefFolder = new Folder(Folder.current.fsName + "/" + "(hs_pref)");
         }
 
         // Script pref file and proxy path setting file
         hs_proxyManager.prefFileName = "hs_proxyManager.pref";
-        hs_proxyManager.prefProxyFileName = "hs_proxyManager.proxy"; // Pref file for proxy-set folder
+        hs_proxyManager.prefProxyFileName = "hs_proxyManager.proxy"; // Default proxy root setting.
         hs_proxyManager.prefFile =  new File(hs_proxyManager.prefFolder.fsName +"/"+ hs_proxyManager.prefFileName);
         hs_proxyManager.defaultProxyPath = new File(hs_proxyManager.prefFolder.fsName +"/"+ hs_proxyManager.prefProxyFileName);
 
-        hs_proxyManager.start = hs_proxyManager.buildUIPanel(this); //pray...
+        hs_proxyManager.start = hs_proxyManager.buildUIPanel(this);
 
 
 } else {
 
         hs_proxyManager.start = undefined;
-        alert("Error: This script does support After Effects CS3 or above)");
+        alert("Error: This script requires After Effects CS3 or later.");
 
 }

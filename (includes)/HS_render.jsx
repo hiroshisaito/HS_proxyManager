@@ -26,7 +26,7 @@ var hs_render = new Object();
 hs_render.chkRQueue = function(alrt) {
 	var qIndex = 0;
 	var qArray = new Array();
-	var noQ = "There's no item in render queue.";
+	var noQ = "No items are in the render queue.";
 	var qQ = app.project.renderQueue.numItems;
 	if(qQ >= 1) {
 		for (var i = 1; i <= qQ; i++) {

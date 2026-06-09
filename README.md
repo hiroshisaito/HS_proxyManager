@@ -4,48 +4,46 @@ Current version: **1.1**
 
 ## Overview
 
-`HS_ProxyManager.jsx` is an ExtendScript for Adobe After Effects designed to streamline the creation, management, and application of proxy files within your projects.
-Through a ScriptUI panel, it allows you to easily generate proxies at multiple resolutions for selected footage or compositions and switch between them.
+`HS_ProxyManager.jsx` is an After Effects ScriptUI panel for creating and switching proxy files.
+It renders selected footage or comps at multiple resolutions and stores them in a project-specific proxy folder.
 
 ## Features
 
-* **ScriptUI Panel:** Provides an easy-to-use interface.
+* **ScriptUI Panel:** Create and switch proxies from one panel.
 * **Proxy Generation:**
-    * Creates proxies from selected items (footage, compositions).
-    * Supports batch generation at multiple resolutions (100%, 50%, 33%, 25%).
-    * Utilizes the After Effects Render Queue for rendering.
-    * Supports background rendering execution via the `aerender` command line, allowing you to continue working (generates batch files for macOS/Windows).
+    * Render selected footage or comps at 100%, 50%, 33%, and 25%.
+    * Use the After Effects Render Queue.
+    * Optionally launch background rendering with `aerender`.
 * **Proxy Management:**
-    * Easily switch between generated proxies (at different resolutions) and the original file ("Main").
-    * Automatically generates and manages a dedicated proxy folder structure for each project.
-    * The proxy folder location can be set to the same directory as the project file or a custom location.
-    * Allows setting and changing the alpha mode interpretation for proxies (Auto/Straight/Premultiplied/Ignore).
+    * Switch selected items, or all project items, between generated proxies and the original source ("Main").
+    * Store proxies in a project-specific folder.
+    * Use the project folder or a custom proxy root.
+    * Set proxy alpha interpretation (Auto/Straight/Premultiplied/Ignore).
 * **Configuration:**
-    * Set and save the default path for the proxy folder.
-    * Configure render settings such as Output Module and audio output.
-    * Settings are saved to a preference file.
+    * Save the default proxy root.
+    * Save output module, audio, and queue-only settings.
 
 ## Requirements
 
 * Adobe After Effects CS3 (Version 8) or later
 * Included helper scripts (located in the `(includes)` folder: `HS_util.jsx`, `HS_render.jsx`, `HS_renderCore.jsx`)
-* Render settings templates imported from `HS_proxyManager.ars`
+* Render settings templates from `HS_proxyManager.ars`
 
 ## Render Settings Template Setup
 
-Before using **Make Proxy** for the first time, import the bundled render settings templates into After Effects.
+Import the bundled render settings templates once before using **Make Proxy**.
 
 1. Open After Effects.
 2. Choose **Edit > Templates > Render Settings...**.
 3. Click **Import...**.
 4. Select `HS_proxyManager.ars` from this repository.
-5. Confirm that these templates are available:
+5. Confirm these templates are available:
     * `[HS_PROXY_1/1]`
     * `[HS_PROXY_1/2]`
     * `[HS_PROXY_1/3]`
     * `[HS_PROXY_1/4]`
 
-`HS_proxyManager.jsx` uses these render settings templates when it builds the proxy render queue. If they are not installed, the script will stop and ask you to import `HS_proxyManager.ars`.
+The script needs these templates to build the proxy render queue. If they are missing, it will ask you to import `HS_proxyManager.ars`.
 
 ## License
 

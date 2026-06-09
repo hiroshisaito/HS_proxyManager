@@ -4,7 +4,7 @@
 
 ### Changed
 
-* Removed the **Enable Multiprocessing** option from the proxy rendering setup dialog.
-* Stopped reading, applying, and saving the legacy `mp` render preference.
-* Forced background `aerender` command generation to omit the legacy `-mp` flag, preventing conflicts with modern After Effects Multi-Frame Rendering.
-* Updated `README.md` so the render configuration description no longer mentions multiprocessing.
+* Removed **Enable Multiprocessing** from the proxy rendering setup dialog.
+* Ignore the legacy `mp` preference and never pass `-mp` to `aerender`.
+* Added an **Apply to All Items** option for proxy switching.
+* Updated `README.md` to match the current render settings.

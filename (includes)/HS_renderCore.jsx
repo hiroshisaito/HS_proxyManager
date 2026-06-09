@@ -24,8 +24,7 @@ SOFTWARE.
 
 // hs_renderCore.aebat_fileExport(PATH_TO_BATCHFILE, BATCH_COMMAND_STR, BATCH_EXECUTE_FLAG, MAC_FLAG)
 //
-// exports aerender's command batch file, if BATCH_EXECUTE_FLAG was true,
-// the batch file is going to execure immediately.
+// Writes an aerender command file and optionally runs it.
 //
 
 #includepath "./"
@@ -67,7 +66,7 @@ hs_renderCore.aebat_fileExport =  function(path, battxt, batExecFlag, mac) {
 	batFile.encoding =  hsUtil.checkOSEncode();
 	var opened = batFile.open("w");
 	if(!opened){
-		alert("Could not write batch file:\n" + batFile.fsName + "\nCheck the permission and try again.");
+		alert("Could not write batch file:\n" + batFile.fsName + "\nCheck permissions and try again.");
 		return null;
 	}
 	var wrote = batFile.write(battxt);
@@ -92,9 +91,7 @@ hs_renderCore.aebat_fileExport =  function(path, battxt, batExecFlag, mac) {
 
 // hs_renderCore.aerenderPath
 //
-// returns aerender command path(str).
-// NOTICE: This return value is NOT file object.
-// the string is converted SPACE to "\ "(back-slash and space) for Mac.
+// Returns the aerender command path as a string.
 //
 
 
@@ -105,14 +102,13 @@ hs_renderCore.aerenderPath = function() {
     var aerenderCmdPath;
 
 	if(parseFloat(app.version) < 8) {
-		 alert("HS_renderCore.jsxinc supports AfterEffects CS3 or above.");
+		 alert("HS_renderCore.jsx requires After Effects CS3 or later.");
          return null;
 	} else {
 
-		if(hsUtil.osType() === "Mac"){ // Mac OS X
+		if(hsUtil.osType() === "Mac"){ // macOS
 
             aerenderFolderPath = Folder.startup.parent.parent.parent;
-            //alert(aerenderFolderPath);
             aeCommand = File(aerenderFolderPath.fsName + "/aerender");
 
 
@@ -124,7 +120,7 @@ hs_renderCore.aerenderPath = function() {
             }
 
 
-		} else if(hsUtil.osType() === "Win") { //Windows
+		} else if(hsUtil.osType() === "Win") { // Windows
             aerenderFolderPath = Folder.startup;
             aeCommand = File(aerenderFolderPath.fsName + "/aerender.exe");
 
@@ -138,7 +134,7 @@ hs_renderCore.aerenderPath = function() {
 
 		} else {
 
-            alert("This OS is not supported") //...just'n case
+            alert("This OS is not supported.");
             return null;
 
 		}
@@ -164,10 +160,7 @@ hs_renderCore.aebatMakeCommand = function(sound, memusage, imgcache, priority, m
     var hs_aebatFile = aep;
     var hs_aebat_memusage = "-mem_usage" + " " + memusage + " " + imgcache;
 
-    //var cmdPath = hs_renderCore.aerenderPath();
-    //alert(hs_aebatFile);
-
-    // Disabled because legacy aerender multiprocessing can conflict with modern MfR.
+    // Legacy aerender multiprocessing is disabled to avoid conflicts with modern MfR.
 	mp = "";
 
 
@@ -176,7 +169,7 @@ hs_renderCore.aebatMakeCommand = function(sound, memusage, imgcache, priority, m
 		if(priority === 1) { cpuPriority = "nice -20";
 		} else if (priority === 2) { cpuPriority = "nice -10";
 		} else if (priority === 3) { cpuPriority = "";
-		} else { alert("Error: CPU Priority (hs_aebat_makeCmd)");
+		} else { alert("Invalid CPU priority.");
 		}
 
         cmdPath = hs_renderCore.aerenderPath();
@@ -190,7 +183,6 @@ hs_renderCore.aebatMakeCommand = function(sound, memusage, imgcache, priority, m
         output = cpuPriority + " " + hs_renderCore.quoteUnixArg(cmdPath) + " " + hs_aebat_memusage + " " + soundoption + " " + mp + " " + "-project " + hs_renderCore.quoteUnixArg(targetFile);
         output = termHeader + hs_renderCore.xmlEscape(output) + termFooter;
 
-        //alert(output);
         return output;
 
 	} else {
@@ -198,7 +190,7 @@ hs_renderCore.aebatMakeCommand = function(sound, memusage, imgcache, priority, m
 		if(priority === 1) { cpuPriority = "/low";
 		} else if (priority === 2) { cpuPriority = "/belownormal";
 		} else if (priority === 3) { cpuPriority = "/normal";
-		} else { alert("Error: CPU Priority (hs_renderCore.aebatMakeCommand)");
+		} else { alert("Invalid CPU priority.");
 		}
         cmdPath = Folder.startup.fsName;
         targetFile = hs_aebatFile.fsName;
@@ -211,8 +203,6 @@ hs_renderCore.aebatMakeCommand = function(sound, memusage, imgcache, priority, m
         return output;
     }
 
-
-    //alert(output);
 	return output;
 
 }
