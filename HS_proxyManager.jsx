@@ -48,6 +48,47 @@ hs_proxyManager.normalizePrefPath = function(pathText) {
 
 
 
+hs_proxyManager.sameAsProjectProxyText = "./(Same as project file.)";
+
+
+
+hs_proxyManager.normalizeProxyPathText = function(pathText) {
+    pathText = hs_proxyManager.normalizePrefPath(pathText);
+
+    if(pathText === null || pathText === hs_proxyManager.sameAsProjectProxyText) { return null; }
+
+    pathText = pathText.replace(/\\/g, "/");
+
+    if(pathText === "." || pathText === "./") { return null; }
+
+    return pathText;
+}
+
+
+
+hs_proxyManager.isAbsolutePath = function(pathText) {
+    pathText = hs_proxyManager.normalizeProxyPathText(pathText);
+
+    if(pathText === null) { return false; }
+    if(pathText.match(/^[A-Za-z]:\//) !== null) { return true; }
+    if(pathText.indexOf("/") === 0) { return true; }
+
+    return false;
+}
+
+
+
+hs_proxyManager.resolvePathFromProject = function(pathText, projectRoot) {
+    pathText = hs_proxyManager.normalizeProxyPathText(pathText);
+
+    if(pathText === null) { return projectRoot.fsName; }
+    if(hs_proxyManager.isAbsolutePath(pathText)) { return pathText; }
+
+    return projectRoot.fsName + "/" + pathText;
+}
+
+
+
 hs_proxyManager.loadRenderPref = function(prefFile) {
     var pref = new Object();
     pref.sound = null;
@@ -119,9 +160,28 @@ hs_proxyManager.projectProxyPrefFile = function(projectFile) {
 
 
 
-hs_proxyManager.saveProjectProxyPref = function(projectFile, proxyFolder) {
+hs_proxyManager.projectProxyPrefText = function(projectFile, proxyFolder, proxyRootPath) {
+    if(arguments.length >= 3) {
+        proxyRootPath = hs_proxyManager.normalizeProxyPathText(proxyRootPath);
+        var projectProxyFolderName = "(" + projectFile.name +")";
+
+        if(proxyRootPath === null) {
+            return hs_proxyManager.folderName + "/" + projectProxyFolderName;
+        }
+
+        if(!hs_proxyManager.isAbsolutePath(proxyRootPath)) {
+            return proxyRootPath + "/" + hs_proxyManager.folderName + "/" + projectProxyFolderName;
+        }
+    }
+
+    return hs_proxyManager.normalizeProxyPathText(proxyFolder.fsName);
+}
+
+
+
+hs_proxyManager.saveProjectProxyPref = function(projectFile, proxyFolder, proxyRootPath) {
     var currentProjectProxyPref = hs_proxyManager.projectProxyPrefFile(projectFile);
-    return hsUtil.savePref(currentProjectProxyPref, projectFile.parent, proxyFolder.fsName);
+    return hsUtil.savePref(currentProjectProxyPref, projectFile.parent, hs_proxyManager.projectProxyPrefText(projectFile, proxyFolder, proxyRootPath));
 }
 
 
@@ -134,12 +194,28 @@ hs_proxyManager.templateExists = function(templateList, templateName) {
 }
 
 
+
+hs_proxyManager.createFolderWithParents = function(folder) {
+    if(folder.exists) { return true; }
+
+    if(folder.parent !== null && folder.parent.fsName !== folder.fsName && !folder.parent.exists) {
+        if(!hs_proxyManager.createFolderWithParents(folder.parent)) { return false; }
+    }
+
+    try {
+        return (folder.create() || folder.exists);
+    } catch(e) {
+        return false;
+    }
+}
+
+
 // hs_proxyManager.checkProxyFolder(path)
 // Resolve the proxy root folder for the current project.
 // Returns a Folder object.
 //
 // Arguments:
-// path: Proxy root path. (string)
+// path: Proxy root path. Relative paths start from the AEP folder. (string)
 // onlycheck: If true, do not create missing folders. (Boolean)
 // useCurrentFile: If true, prefer the current project's .proxy file. (Boolean)
 
@@ -161,16 +237,16 @@ hs_proxyManager.checkProxyFolder = function(path, onlycheck, useCurrentFile){
         //  3. Project folder.
 
         if(projectProxySettingFile.exists && (useCurrentFile)){
-            proxyRootPath = hs_proxyManager.normalizePrefPath(hsUtil.loadPref(projectProxySettingFile));
+            proxyRootPath = hs_proxyManager.normalizeProxyPathText(hsUtil.loadPref(projectProxySettingFile));
             if(proxyRootPath !== null) {
-                proxyRoot = new Folder(proxyRootPath);
+                proxyRoot = new Folder(hs_proxyManager.resolvePathFromProject(proxyRootPath, projectRoot));
             }
         }
 
-        path = hs_proxyManager.normalizePrefPath(path);
+        path = hs_proxyManager.normalizeProxyPathText(path);
 
         if(proxyRoot === null && path !== null) {
-            proxyRoot = new Folder(path + "/" +  hs_proxyManager.folderName + "/" + projectProxyFolderName);
+            proxyRoot = new Folder(hs_proxyManager.resolvePathFromProject(path, projectRoot) + "/" +  hs_proxyManager.folderName + "/" + projectProxyFolderName);
         } else if(proxyRoot === null) {
             proxyRoot = new Folder(projectRoot.fsName + "/" +  hs_proxyManager.folderName + "/" + projectProxyFolderName);
         }
@@ -184,13 +260,7 @@ hs_proxyManager.checkProxyFolder = function(path, onlycheck, useCurrentFile){
 
             if(onlycheck === undefined || onlycheck === null || onlycheck === false){
 
-                var created = false;
-                try{
-                    if(proxyRoot.parent !== null && !proxyRoot.parent.exists) {
-                        proxyRoot.parent.create();
-                    }
-                    created = proxyRoot.create();
-                } catch(e) {}
+                var created = hs_proxyManager.createFolderWithParents(proxyRoot);
 
                 if(!created || !proxyRoot.exists){
                     alert("Could not create proxy folder:\n" + proxyRoot.fsName);
@@ -232,7 +302,7 @@ hs_proxyManager.checkProxyResFolder= function(path) {
     var proxyResFolder = new Folder(path);
 
     if(!proxyResFolder.exists){
-        var created = proxyResFolder.create();
+        var created = hs_proxyManager.createFolderWithParents(proxyResFolder);
         if(!created || !proxyResFolder.exists){
             alert("Could not create proxy folder:\n" + proxyResFolder.fsName);
             return null;
@@ -589,15 +659,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
 
     if(proxyPrefTxt !== null){
-        proxyDefaultPath = hs_proxyManager.normalizePrefPath(proxyPrefTxt);
-    }
-
-    // Validate the saved proxy path.
-
-    if(proxyDefaultPath !== null) {
-
-        (File(proxyDefaultPath).exists) ? proxyDefaultPath = Folder(proxyDefaultPath).fsName : proxyDefaultPath = null ;
-
+        proxyDefaultPath = hs_proxyManager.normalizeProxyPathText(proxyPrefTxt);
     }
 
 
@@ -640,12 +702,13 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 110, 340, 220], 'Proxy Folder:');
 
         if(proxyDefaultPath === null){
-            HS_ProxyWin.folderSetting.pathText = './(Same as project file.)';
+            HS_ProxyWin.folderSetting.pathText = hs_proxyManager.sameAsProjectProxyText;
         } else {
             HS_ProxyWin.folderSetting.pathText = proxyDefaultPath;
         }
 
-        HS_ProxyWin.folderSetting.pathTxt = HS_ProxyWin.folderSetting.add('edittext', [15,15,285,35],   HS_ProxyWin.folderSetting.pathText ,{readonly:true});
+        HS_ProxyWin.folderSetting.pathTxt = HS_ProxyWin.folderSetting.add('edittext', [15,15,285,35],   HS_ProxyWin.folderSetting.pathText);
+        HS_ProxyWin.folderSetting.pathTxt.helpTip = "Relative paths start from the AEP folder. Use / as the separator.";
 
         HS_ProxyWin.folderSetting.button1  = HS_ProxyWin.folderSetting.add('button',  [290,15, 315,35], '...');
         HS_ProxyWin.folderSetting.button2  = HS_ProxyWin.folderSetting.add('button',  [15,40, 160,60],  'Same as project');
@@ -657,11 +720,19 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     // Set proxy
 
-    HS_ProxyUIBtn_1.onClick = function() {hs_proxyManager.setProxy(1, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_2.onClick = function() {hs_proxyManager.setProxy(2, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_3.onClick = function() {hs_proxyManager.setProxy(3, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_4.onClick = function() {hs_proxyManager.setProxy(4, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_0.onClick = function() {hs_proxyManager.setProxy(0, hs_alphaSelection, proxyDefaultPath, HS_ProxyUIApplyAll.value);}
+    var syncProxyPathFromUI = function() {
+        proxyDefaultPath = hs_proxyManager.normalizeProxyPathText(HS_ProxyWin.folderSetting.pathTxt.text);
+        HS_ProxyWin.folderSetting.pathTxt.text = (proxyDefaultPath === null) ? hs_proxyManager.sameAsProjectProxyText : proxyDefaultPath;
+        return proxyDefaultPath;
+    }
+
+    HS_ProxyWin.folderSetting.pathTxt.onChange = function() { syncProxyPathFromUI(); }
+
+    HS_ProxyUIBtn_1.onClick = function() {hs_proxyManager.setProxy(1, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_2.onClick = function() {hs_proxyManager.setProxy(2, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_3.onClick = function() {hs_proxyManager.setProxy(3, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_4.onClick = function() {hs_proxyManager.setProxy(4, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_0.onClick = function() {hs_proxyManager.setProxy(0, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
 
 
 
@@ -684,7 +755,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
 
             if(catchErr === false) {
-                proxyDefaultPath = newProxyFolder.fsName;
+                proxyDefaultPath = hs_proxyManager.normalizeProxyPathText(newProxyFolder.fsName);
                 HS_ProxyWin.folderSetting.pathTxt.text = proxyDefaultPath;
                 trial.remove();
             }
@@ -701,7 +772,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
     HS_ProxyWin.folderSetting.button2.onClick = function(){
 
             proxyDefaultPath = null;
-            HS_ProxyWin.folderSetting.pathTxt.text = './(Same as project file.)';
+            HS_ProxyWin.folderSetting.pathTxt.text = hs_proxyManager.sameAsProjectProxyText;
 
     }
 
@@ -709,6 +780,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
     // Save the default proxy root.
     HS_ProxyWin.folderSetting.button3.onClick = function(){
 
+            syncProxyPathFromUI();
             var prefTextContent = (proxyDefaultPath === null) ? "null" : proxyDefaultPath;
 
             var canSavePref = hsUtil.savePref(hs_proxyManager.defaultProxyPath, hs_proxyManager.prefFolder, prefTextContent);
@@ -727,13 +799,8 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     HS_ProxyWin.folderSetting.button9.onClick = function(){
 
-        var newDefultPath = proxyDefaultPath;
-
-        // Check only; do not create folders here.
-        var folderExists = (hs_proxyManager.checkProxyFolder(proxyDefaultPath, true))
+        var newDefaultPath = syncProxyPathFromUI();
         var saveUntitled;
-
-        if(folderExists !== null) {}
 
         if(app.project.file === null) {
             saveUntitled = app.project.save();
@@ -747,7 +814,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         if(app.project.file){
 
             var originalProject = new File(app.project.file);
-            var proxyOutputFolder = hs_proxyManager.checkProxyFolder(newDefultPath, false, false);
+            var proxyOutputFolder = hs_proxyManager.checkProxyFolder(newDefaultPath, false, false);
             if(proxyOutputFolder === null) { return; }
 
             var confirmDialog = confirm("Reset all proxies in this project?", true);
@@ -762,7 +829,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                     }
                 }
 
-                if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder) === null) {
+                if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder, newDefaultPath) === null) {
                     alert("Could not save this project's proxy setting. Check permissions.");
                 }
            }
@@ -814,11 +881,12 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         if(saveFlag === true){
 
             var originalProject = new File(app.project.file);
-            var proxyOutputFolder = hs_proxyManager.checkProxyFolder(proxyDefaultPath);
+            var currentProxyPath = syncProxyPathFromUI();
+            var proxyOutputFolder = hs_proxyManager.checkProxyFolder(currentProxyPath);
 
             if(proxyOutputFolder === null) { return; }
 
-            if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder) === null) {
+            if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder, currentProxyPath) === null) {
                 alert("Could not save this project's proxy setting. Check permissions.");
                 return;
             }
@@ -973,7 +1041,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 if(parseFloat(app.version) >= 8) {
     app.project.renderQueue.templates
 
-        hs_proxyManager.version = "1.1";
+        hs_proxyManager.version = "1.2";
         hs_proxyManager.folderName = "(_HS_proxy_)";
 
         // Pref folder

@@ -1,5 +1,13 @@
 # Changes
 
+## 1.2 - 2026-06-10
+
+### Added
+
+* Added direct Proxy Folder path input.
+* Added AEP-relative Proxy Folder paths using `/` on Windows and macOS.
+* Keep project `.proxy` settings relative when the Proxy Folder input is relative.
+
 ## 1.1 - 2026-06-09
 
 ### Changed
