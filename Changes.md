@@ -8,6 +8,12 @@
 * Added AEP-relative Proxy Folder paths using `/` on Windows and macOS.
 * Keep project `.proxy` settings relative when the Proxy Folder input is relative.
 
+### Fixed
+
+* Normalize repeated and trailing path separators in Proxy Folder input.
+* Let edited Proxy Folder input override an existing project `.proxy` until it is applied.
+* Reconnect existing proxies after applying a new project proxy folder.
+
 ## 1.1 - 2026-06-09
 
 ### Changed

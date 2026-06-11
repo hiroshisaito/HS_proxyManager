@@ -58,8 +58,17 @@ hs_proxyManager.normalizeProxyPathText = function(pathText) {
     if(pathText === null || pathText === hs_proxyManager.sameAsProjectProxyText) { return null; }
 
     pathText = pathText.replace(/\\/g, "/");
+    if(pathText.indexOf("//") === 0) {
+        pathText = "//" + pathText.substring(2).replace(/\/+/g, "/");
+    } else {
+        pathText = pathText.replace(/\/+/g, "/");
+    }
 
-    if(pathText === "." || pathText === "./") { return null; }
+    while(pathText.length > 1 && pathText.charAt(pathText.length - 1) === "/" && pathText.match(/^[A-Za-z]:\/$/) === null) {
+        pathText = pathText.substring(0, pathText.length - 1);
+    }
+
+    if(pathText === ".") { return null; }
 
     return pathText;
 }
@@ -395,6 +404,71 @@ hs_proxyManager.fixPSDLayers = function(layerName) {
 
 
 
+hs_proxyManager.getCurrentProxyResolution = function(curItem) {
+    try {
+        if(curItem.proxySource === null || curItem.proxySource.file === null) { return null; }
+        if(curItem.proxySource.file.parent === null) { return null; }
+
+        var resolutionName = curItem.proxySource.file.parent.name;
+        if(resolutionName.match(/^[1-4]$/) === null) { return null; }
+
+        return parseInt(resolutionName, 10);
+    } catch(e) {
+        return null;
+    }
+}
+
+
+
+hs_proxyManager.setItemProxy = function(curItem, val, alpha, proxyRootFolder) {
+    if(val === 0){
+        curItem.setProxyToNone();
+        return true;
+    }
+
+    var itemProxyFolder = Folder(proxyRootFolder.fsName + "/"+ curItem.id);
+
+    if(!itemProxyFolder.exists) { return false; }
+
+    var proxyResFolder = Folder(itemProxyFolder.fsName+"/"+val);
+
+    if(!proxyResFolder.exists) { return false; }
+
+    var proxyFolderItems = proxyResFolder.getFiles();
+    var proxyFiles = new Array();
+
+    for(var pf = 0; pf < proxyFolderItems.length; pf++){
+        if(proxyFolderItems[pf] instanceof File && proxyFolderItems[pf].name.match(/^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i)){
+            proxyFolderItems[pf].remove();
+        } else if(proxyFolderItems[pf] instanceof File) {
+            proxyFiles.push(proxyFolderItems[pf]);
+        }
+    }
+
+    proxyFiles.sort(function(a, b) {
+        var aName = a.name.toLowerCase();
+        var bName = b.name.toLowerCase();
+        if(aName < bName) { return -1; }
+        if(aName > bName) { return 1; }
+        return 0;
+    });
+
+    if(proxyFiles.length > 1) {
+        curItem.setProxyWithSequence(File(proxyFiles[0]),false);
+    } else if(proxyFiles.length === 1){
+        curItem.setProxy(File(proxyFiles[0]));
+    } else {
+        return false;
+    }
+
+    hs_proxyManager.applyProxyFrameRate(curItem);
+    hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
+
+    return true;
+}
+
+
+
 // hs_proxyManager.setProxy(val, alpha, path)
 //
 // Arguments:
@@ -413,17 +487,19 @@ hs_proxyManager.fixPSDLayers = function(layerName) {
 //
 // path: Proxy folder path. (string)
 // applyAll: If true, apply to every proxyable project item. (Boolean)
+// useCurrentFile: If false, use the supplied path instead of the project .proxy file. (Boolean)
 //
 
-hs_proxyManager.setProxy = function(val, alpha, path, applyAll){
+hs_proxyManager.setProxy = function(val, alpha, path, applyAll, useCurrentFile){
 
     var proxyFolderItems;
     var proxyRootFolder = null;
 
     applyAll = (applyAll === true);
+    useCurrentFile = (useCurrentFile !== false);
 
     if(val !== 0){
-        proxyRootFolder = hs_proxyManager.checkProxyFolder(path, true, true);
+        proxyRootFolder = hs_proxyManager.checkProxyFolder(path, true, useCurrentFile);
         if(proxyRootFolder){
             proxyFolderItems = Folder(proxyRootFolder.fsName).getFiles();
         } else {
@@ -440,66 +516,7 @@ hs_proxyManager.setProxy = function(val, alpha, path, applyAll){
         var curItem = app.project.item(i);
 
         if((applyAll || curItem.selected) && hs_proxyManager.isProxyableItem(curItem)){
-            if(val === 0){ curItem.setProxyToNone(); continue; }
-
-            var itemProxyFolder = Folder(proxyRootFolder.fsName + "/"+ curItem.id);
-
-            if(itemProxyFolder.exists){
-
-                var proxyResFolder = Folder(itemProxyFolder.fsName+"/"+val);
-
-                if(!proxyResFolder.exists) { continue; }
-
-                var proxyFolderItems = proxyResFolder.getFiles();
-                var proxyFiles = new Array();
-
-                for(var pf = 0; pf < proxyFolderItems.length; pf++){
-                    if(proxyFolderItems[pf] instanceof File && proxyFolderItems[pf].name.match(/^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i)){
-                        proxyFolderItems[pf].remove();
-                    } else if(proxyFolderItems[pf] instanceof File) {
-                        proxyFiles.push(proxyFolderItems[pf]);
-                    }
-                }
-
-                proxyFiles.sort(function(a, b) {
-                    var aName = a.name.toLowerCase();
-                    var bName = b.name.toLowerCase();
-                    if(aName < bName) { return -1; }
-                    if(aName > bName) { return 1; }
-                    return 0;
-                });
-
-                if(proxyFiles.length > 1) {
-                    // Set proxy.
-
-                    curItem.setProxyWithSequence(File(proxyFiles[0]),false);
-
-                    // Match frame rate.
-                    hs_proxyManager.applyProxyFrameRate(curItem);
-
-                    // Set alpha mode when available.
-                    hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
-
-
-
-                } else if(proxyFiles.length === 1){
-                    // Set proxy.
-                    curItem.setProxy(File(proxyFiles[0]));
-
-                    // Match frame rate.
-                    hs_proxyManager.applyProxyFrameRate(curItem);
-
-                    // Set alpha mode when available.
-
-                    hs_proxyManager.applyAlphaMode(curItem.proxySource, alpha);
-
-
-                } else {
-                    ;
-                }
-            }
-
-
+            hs_proxyManager.setItemProxy(curItem, val, alpha, proxyRootFolder);
         }
     }
     return;
@@ -720,19 +737,25 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     // Set proxy
 
+    var proxyPathEdited = false;
+
     var syncProxyPathFromUI = function() {
         proxyDefaultPath = hs_proxyManager.normalizeProxyPathText(HS_ProxyWin.folderSetting.pathTxt.text);
         HS_ProxyWin.folderSetting.pathTxt.text = (proxyDefaultPath === null) ? hs_proxyManager.sameAsProjectProxyText : proxyDefaultPath;
         return proxyDefaultPath;
     }
 
-    HS_ProxyWin.folderSetting.pathTxt.onChange = function() { syncProxyPathFromUI(); }
+    HS_ProxyWin.folderSetting.pathTxt.onChanging = function() { proxyPathEdited = true; }
+    HS_ProxyWin.folderSetting.pathTxt.onChange = function() {
+        proxyPathEdited = true;
+        syncProxyPathFromUI();
+    }
 
-    HS_ProxyUIBtn_1.onClick = function() {hs_proxyManager.setProxy(1, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_2.onClick = function() {hs_proxyManager.setProxy(2, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_3.onClick = function() {hs_proxyManager.setProxy(3, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_4.onClick = function() {hs_proxyManager.setProxy(4, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
-    HS_ProxyUIBtn_0.onClick = function() {hs_proxyManager.setProxy(0, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value);}
+    HS_ProxyUIBtn_1.onClick = function() {hs_proxyManager.setProxy(1, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value, !proxyPathEdited);}
+    HS_ProxyUIBtn_2.onClick = function() {hs_proxyManager.setProxy(2, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value, !proxyPathEdited);}
+    HS_ProxyUIBtn_3.onClick = function() {hs_proxyManager.setProxy(3, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value, !proxyPathEdited);}
+    HS_ProxyUIBtn_4.onClick = function() {hs_proxyManager.setProxy(4, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value, !proxyPathEdited);}
+    HS_ProxyUIBtn_0.onClick = function() {hs_proxyManager.setProxy(0, hs_alphaSelection, syncProxyPathFromUI(), HS_ProxyUIApplyAll.value, !proxyPathEdited);}
 
 
 
@@ -757,6 +780,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
             if(catchErr === false) {
                 proxyDefaultPath = hs_proxyManager.normalizeProxyPathText(newProxyFolder.fsName);
                 HS_ProxyWin.folderSetting.pathTxt.text = proxyDefaultPath;
+                proxyPathEdited = true;
                 trial.remove();
             }
 
@@ -773,6 +797,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
             proxyDefaultPath = null;
             HS_ProxyWin.folderSetting.pathTxt.text = hs_proxyManager.sameAsProjectProxyText;
+            proxyPathEdited = true;
 
     }
 
@@ -817,20 +842,40 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
             var proxyOutputFolder = hs_proxyManager.checkProxyFolder(newDefaultPath, false, false);
             if(proxyOutputFolder === null) { return; }
 
-            var confirmDialog = confirm("Reset all proxies in this project?", true);
+            var confirmDialog = confirm("Update this project's proxy folder and reconnect existing proxies?", true);
 
             if(confirmDialog === true){
+
+                var proxyResolutionByItemId = new Object();
 
                 for(var i = 1; i<=app.project.items.length; i++){
 
                     var curItem = app.project.item(i);
                     if(hs_proxyManager.isProxyableItem(curItem)){
-                        curItem.setProxyToNone();
+                        var currentProxyResolution = hs_proxyManager.getCurrentProxyResolution(curItem);
+                        if(currentProxyResolution !== null) {
+                            proxyResolutionByItemId[curItem.id.toString()] = currentProxyResolution;
+                        }
                     }
                 }
 
                 if(hs_proxyManager.saveProjectProxyPref(originalProject, proxyOutputFolder, newDefaultPath) === null) {
                     alert("Could not save this project's proxy setting. Check permissions.");
+                    return;
+                }
+
+                proxyPathEdited = false;
+
+                for(var rp = 1; rp<=app.project.items.length; rp++){
+
+                    var reconnectItem = app.project.item(rp);
+                    if(hs_proxyManager.isProxyableItem(reconnectItem)){
+                        reconnectItem.setProxyToNone();
+                        var reconnectResolution = proxyResolutionByItemId[reconnectItem.id.toString()];
+                        if(reconnectResolution !== undefined) {
+                            hs_proxyManager.setItemProxy(reconnectItem, reconnectResolution, hs_alphaSelection, proxyOutputFolder);
+                        }
+                    }
                 }
            }
 
@@ -890,6 +935,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                 alert("Could not save this project's proxy setting. Check permissions.");
                 return;
             }
+            proxyPathEdited = false;
 
             if(proxyOutputFolder !== null){
 
