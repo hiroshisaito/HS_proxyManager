@@ -4,8 +4,11 @@
 
 ### Changed
 
-* Updated the panel layout to separate proxy switching, alpha settings, proxy folder settings, and proxy creation.
-* Store preferences in `(hs_pref)` directly under the user folder.
+* Updated the panel layout to separate proxy switching, alpha settings, proxy creation, and proxy folder settings.
+* Aligned the panel widths and moved **Make Proxy** between **Proxy Alpha Mode** and **Proxy Folder**.
+* Store preferences in `(hs_pref)` directly under the user profile/home folder.
+* Resolve the preference folder from `USERPROFILE` on Windows and `HOME` on macOS.
+* Migrate existing preference files from previous `(hs_pref)` locations when the new files do not exist.
 
 ## 1.2 - 2026-06-10
 

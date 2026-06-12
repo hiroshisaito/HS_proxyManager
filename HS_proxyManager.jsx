@@ -204,6 +204,52 @@ hs_proxyManager.templateExists = function(templateList, templateName) {
 
 
 
+hs_proxyManager.getUserFolder = function() {
+    var userPath = null;
+
+    try {
+        if(hsUtil.osType() === "Win") {
+            userPath = $.getenv("USERPROFILE");
+        } else {
+            userPath = $.getenv("HOME");
+        }
+    } catch(e) {
+        userPath = null;
+    }
+
+    if(userPath !== null && userPath !== "") {
+        var envUserFolder = new Folder(userPath);
+        if(envUserFolder.exists) { return envUserFolder; }
+    }
+
+    if(Folder.myDocuments.parent !== null) { return Folder.myDocuments.parent; }
+
+    return new Folder("~");
+}
+
+
+
+hs_proxyManager.migratePrefFile = function(fileName, legacyFolders) {
+    var targetFile = new File(hs_proxyManager.prefFolder.fsName + "/" + fileName);
+
+    if(targetFile.exists) { return; }
+
+    for(var i = 0; i < legacyFolders.length; i++) {
+        if(legacyFolders[i] === null) { continue; }
+
+        var sourceFile = new File(legacyFolders[i].fsName + "/" + fileName);
+        if(sourceFile.fsName === targetFile.fsName || !sourceFile.exists) { continue; }
+
+        var prefText = hsUtil.loadPref(sourceFile);
+        if(prefText !== null) {
+            hsUtil.savePref(targetFile, hs_proxyManager.prefFolder, prefText);
+            return;
+        }
+    }
+}
+
+
+
 hs_proxyManager.createFolderWithParents = function(folder) {
     if(folder.exists) { return true; }
 
@@ -685,11 +731,11 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
     HS_ProxyWin.preferredSize = [390, 315];
 
     HS_ProxyWin.switchPanel = HS_ProxyWin.add('panel',[5, 2, 380, 72], 'Proxy Switch:');
-    var HS_ProxyUIBtn_1 = HS_ProxyWin.switchPanel.add('button', [10, 18, 65, 42], "100%");
-    var HS_ProxyUIBtn_2 = HS_ProxyWin.switchPanel.add('button', [70, 18, 125, 42], "50%");
-    var HS_ProxyUIBtn_3 = HS_ProxyWin.switchPanel.add('button', [130, 18, 185, 42], "33%");
-    var HS_ProxyUIBtn_4 = HS_ProxyWin.switchPanel.add('button', [190, 18, 245, 42], "25%");
-    var HS_ProxyUIBtn_0 = HS_ProxyWin.switchPanel.add('button', [250, 18, 310, 42], "Main");
+    var HS_ProxyUIBtn_1 = HS_ProxyWin.switchPanel.add('button', [10, 18, 75, 42], "100%");
+    var HS_ProxyUIBtn_2 = HS_ProxyWin.switchPanel.add('button', [80, 18, 145, 42], "50%");
+    var HS_ProxyUIBtn_3 = HS_ProxyWin.switchPanel.add('button', [150, 18, 215, 42], "33%");
+    var HS_ProxyUIBtn_4 = HS_ProxyWin.switchPanel.add('button', [220, 18, 285, 42], "25%");
+    var HS_ProxyUIBtn_0 = HS_ProxyWin.switchPanel.add('button', [290, 18, 360, 42], "Main");
 
     var hs_radioButtonUI = true;
     var hs_alphaSelection = 0;
@@ -699,7 +745,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         HS_ProxyWin.btnPanel.btn1 = HS_ProxyWin.btnPanel.add('radiobutton', [10, 18, 80, 42], 'Auto');
         HS_ProxyWin.btnPanel.btn2 = HS_ProxyWin.btnPanel.add('radiobutton', [85, 18, 160, 42], 'Straight');
         HS_ProxyWin.btnPanel.btn3 = HS_ProxyWin.btnPanel.add('radiobutton', [165, 18, 245, 42], 'Premult');
-        HS_ProxyWin.btnPanel.btn4 = HS_ProxyWin.btnPanel.add('radiobutton', [250, 18, 330, 42], 'Ignore');
+        HS_ProxyWin.btnPanel.btn4 = HS_ProxyWin.btnPanel.add('radiobutton', [250, 18, 360, 42], 'Ignore');
 
         HS_ProxyWin.btnPanel.btn1.value = (hs_alphaSelection == 0);
         HS_ProxyWin.btnPanel.btn2.value = (hs_alphaSelection == 1);
@@ -717,7 +763,9 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                                                        hs_proxyManager.changeProxyAlphaMode(hs_alphaSelection);}
 
 
-        HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 140, 380, 250], 'Proxy Folder:');
+    var HS_ProxyUIBtn_make = HS_ProxyWin.add('button', [5, 140, 380, 166], "Make Proxy");
+
+        HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 172, 380, 282], 'Proxy Folder:');
 
         if(proxyDefaultPath === null){
             HS_ProxyWin.folderSetting.pathText = hs_proxyManager.sameAsProjectProxyText;
@@ -733,8 +781,6 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
         HS_ProxyWin.folderSetting.button3  = HS_ProxyWin.folderSetting.add('button',  [180,48, 360,70], 'Save as default');
 
         HS_ProxyWin.folderSetting.button9  = HS_ProxyWin.folderSetting.add('button',  [15,76,360,98],   'Apply to current project');
-
-    var HS_ProxyUIBtn_make = HS_ProxyWin.add('button', [245, 258, 380, 284], "Make Proxy");
 
     var HS_ProxyUIMatteVer = HS_ProxyWin.add('statictext', [5, 290, 380, 310],'HS_ProxyManager Version '+ HS_ProxyManager_VERSION);
 
@@ -1095,10 +1141,7 @@ if(parseFloat(app.version) >= 8) {
 
         // Preference folder.
 
-        hs_proxyManager.userFolder = new Folder("~");
-        if(!hs_proxyManager.userFolder.exists && Folder.myDocuments.parent !== null) {
-            hs_proxyManager.userFolder = Folder.myDocuments.parent;
-        }
+        hs_proxyManager.userFolder = hs_proxyManager.getUserFolder();
         hs_proxyManager.prefFolder = new Folder(hs_proxyManager.userFolder.fsName + "/" + "(hs_pref)");
 
         // Script pref file and proxy path setting file
@@ -1106,6 +1149,14 @@ if(parseFloat(app.version) >= 8) {
         hs_proxyManager.prefProxyFileName = "hs_proxyManager.proxy"; // Default proxy root setting.
         hs_proxyManager.prefFile =  new File(hs_proxyManager.prefFolder.fsName +"/"+ hs_proxyManager.prefFileName);
         hs_proxyManager.defaultProxyPath = new File(hs_proxyManager.prefFolder.fsName +"/"+ hs_proxyManager.prefProxyFileName);
+
+        var legacyPrefFolders = new Array(
+            new Folder(new Folder("~").fsName + "/" + "(hs_pref)"),
+            new Folder(Folder.myDocuments.fsName + "/" + "(hs_pref)"),
+            new Folder(Folder.current.fsName + "/" + "(hs_pref)")
+        );
+        hs_proxyManager.migratePrefFile(hs_proxyManager.prefFileName, legacyPrefFolders);
+        hs_proxyManager.migratePrefFile(hs_proxyManager.prefProxyFileName, legacyPrefFolders);
 
         hs_proxyManager.start = hs_proxyManager.buildUIPanel(this);
 
