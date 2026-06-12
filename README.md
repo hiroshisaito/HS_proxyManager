@@ -1,6 +1,6 @@
 # HS_ProxyManager for Adobe After Effects
 
-Current version: **1.2**
+Current version: **1.2.1**
 
 ## Overview
 
@@ -22,6 +22,7 @@ It renders selected footage or comps at multiple resolutions and stores them in 
 * **Configuration:**
     * Save the default proxy root.
     * Enter proxy root paths directly, or choose a folder from the file dialog.
+    * Store script preferences in `(hs_pref)` under the user folder.
     * Save output module, audio, and queue-only settings.
 
 ## Requirements

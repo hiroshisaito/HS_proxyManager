@@ -1,5 +1,12 @@
 # Changes
 
+## 1.2.1 - 2026-06-13
+
+### Changed
+
+* Updated the panel layout to separate proxy switching, alpha settings, proxy folder settings, and proxy creation.
+* Store preferences in `(hs_pref)` directly under the user folder.
+
 ## 1.2 - 2026-06-10
 
 ### Added

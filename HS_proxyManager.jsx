@@ -682,23 +682,24 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 
     var HS_ProxyManager_VERSION = hs_proxyManager.version;
 
-    var HS_ProxyUIBtn_1 = HS_ProxyWin.add('button', [5, 2, 45, 25], "100%");
-    var HS_ProxyUIBtn_2 = HS_ProxyWin.add('button', [50, 2, 90, 25], "50%");
-    var HS_ProxyUIBtn_3 = HS_ProxyWin.add('button', [95, 2, 135, 25], "33%");
-    var HS_ProxyUIBtn_4 = HS_ProxyWin.add('button', [140, 2, 180, 25], "25%");
-    var HS_ProxyUIBtn_0 = HS_ProxyWin.add('button', [185, 2, 230, 25], "Main");
+    HS_ProxyWin.preferredSize = [390, 315];
 
-    var HS_ProxyUIBtn_make = HS_ProxyWin.add('button', [240, 2, 340, 25], "Make Proxy");
+    HS_ProxyWin.switchPanel = HS_ProxyWin.add('panel',[5, 2, 380, 72], 'Proxy Switch:');
+    var HS_ProxyUIBtn_1 = HS_ProxyWin.switchPanel.add('button', [10, 18, 65, 42], "100%");
+    var HS_ProxyUIBtn_2 = HS_ProxyWin.switchPanel.add('button', [70, 18, 125, 42], "50%");
+    var HS_ProxyUIBtn_3 = HS_ProxyWin.switchPanel.add('button', [130, 18, 185, 42], "33%");
+    var HS_ProxyUIBtn_4 = HS_ProxyWin.switchPanel.add('button', [190, 18, 245, 42], "25%");
+    var HS_ProxyUIBtn_0 = HS_ProxyWin.switchPanel.add('button', [250, 18, 310, 42], "Main");
 
     var hs_radioButtonUI = true;
     var hs_alphaSelection = 0;
-    var HS_ProxyUIApplyAll = HS_ProxyWin.add('checkbox', [5, 88, 170, 108], 'Apply to All Items');
+    var HS_ProxyUIApplyAll = HS_ProxyWin.switchPanel.add('checkbox', [10, 45, 170, 65], 'Apply to All Items');
 
-        HS_ProxyWin.btnPanel = HS_ProxyWin.add('panel',[5, 35, 340, 85], 'Proxy Alpha Mode:');
-        HS_ProxyWin.btnPanel.btn1 = HS_ProxyWin.btnPanel.add('radiobutton', [10, 10, 90, 35], 'Auto');
-        HS_ProxyWin.btnPanel.btn2 = HS_ProxyWin.btnPanel.add('radiobutton', [95, 10, 175, 35], 'Straight');
-        HS_ProxyWin.btnPanel.btn3 = HS_ProxyWin.btnPanel.add('radiobutton', [180, 10, 260, 35], 'Premult');
-        HS_ProxyWin.btnPanel.btn4 = HS_ProxyWin.btnPanel.add('radiobutton', [265, 10, 340, 35], 'Ignore');
+        HS_ProxyWin.btnPanel = HS_ProxyWin.add('panel',[5, 78, 380, 134], 'Proxy Alpha Mode:');
+        HS_ProxyWin.btnPanel.btn1 = HS_ProxyWin.btnPanel.add('radiobutton', [10, 18, 80, 42], 'Auto');
+        HS_ProxyWin.btnPanel.btn2 = HS_ProxyWin.btnPanel.add('radiobutton', [85, 18, 160, 42], 'Straight');
+        HS_ProxyWin.btnPanel.btn3 = HS_ProxyWin.btnPanel.add('radiobutton', [165, 18, 245, 42], 'Premult');
+        HS_ProxyWin.btnPanel.btn4 = HS_ProxyWin.btnPanel.add('radiobutton', [250, 18, 330, 42], 'Ignore');
 
         HS_ProxyWin.btnPanel.btn1.value = (hs_alphaSelection == 0);
         HS_ProxyWin.btnPanel.btn2.value = (hs_alphaSelection == 1);
@@ -716,7 +717,7 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
                                                        hs_proxyManager.changeProxyAlphaMode(hs_alphaSelection);}
 
 
-        HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 110, 340, 220], 'Proxy Folder:');
+        HS_ProxyWin.folderSetting = HS_ProxyWin.add('panel',[5, 140, 380, 250], 'Proxy Folder:');
 
         if(proxyDefaultPath === null){
             HS_ProxyWin.folderSetting.pathText = hs_proxyManager.sameAsProjectProxyText;
@@ -724,16 +725,18 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
             HS_ProxyWin.folderSetting.pathText = proxyDefaultPath;
         }
 
-        HS_ProxyWin.folderSetting.pathTxt = HS_ProxyWin.folderSetting.add('edittext', [15,15,285,35],   HS_ProxyWin.folderSetting.pathText);
+        HS_ProxyWin.folderSetting.pathTxt = HS_ProxyWin.folderSetting.add('edittext', [15,18,330,40],   HS_ProxyWin.folderSetting.pathText);
         HS_ProxyWin.folderSetting.pathTxt.helpTip = "Relative paths start from the AEP folder. Use / as the separator.";
 
-        HS_ProxyWin.folderSetting.button1  = HS_ProxyWin.folderSetting.add('button',  [290,15, 315,35], '...');
-        HS_ProxyWin.folderSetting.button2  = HS_ProxyWin.folderSetting.add('button',  [15,40, 160,60],  'Same as project');
-        HS_ProxyWin.folderSetting.button3  = HS_ProxyWin.folderSetting.add('button',  [165,40, 315,60], 'Save as default');
+        HS_ProxyWin.folderSetting.button1  = HS_ProxyWin.folderSetting.add('button',  [335,18, 360,40], '...');
+        HS_ProxyWin.folderSetting.button2  = HS_ProxyWin.folderSetting.add('button',  [15,48, 175,70],  'Same as project');
+        HS_ProxyWin.folderSetting.button3  = HS_ProxyWin.folderSetting.add('button',  [180,48, 360,70], 'Save as default');
 
-        HS_ProxyWin.folderSetting.button9  = HS_ProxyWin.folderSetting.add('button',  [15,65,315,85],   'Apply to current project');
+        HS_ProxyWin.folderSetting.button9  = HS_ProxyWin.folderSetting.add('button',  [15,76,360,98],   'Apply to current project');
 
-    var HS_ProxyUIMatteVer = HS_ProxyWin.add('statictext', [5, 250, 340, 270],'HS_ProxyManager Version '+ HS_ProxyManager_VERSION);
+    var HS_ProxyUIBtn_make = HS_ProxyWin.add('button', [245, 258, 380, 284], "Make Proxy");
+
+    var HS_ProxyUIMatteVer = HS_ProxyWin.add('statictext', [5, 290, 380, 310],'HS_ProxyManager Version '+ HS_ProxyManager_VERSION);
 
     // Set proxy
 
@@ -1087,18 +1090,16 @@ hs_proxyManager.buildUIPanel = function(HS_ProxyWin){
 if(parseFloat(app.version) >= 8) {
     app.project.renderQueue.templates
 
-        hs_proxyManager.version = "1.2";
+        hs_proxyManager.version = "1.2.1";
         hs_proxyManager.folderName = "(_HS_proxy_)";
 
-        // Pref folder
+        // Preference folder.
 
-        hs_proxyManager.prefFolderHome = new Folder(Folder.myDocuments.fsName + "/" +"(hs_pref)");
-
-        if(hs_proxyManager.prefFolderHome.exists){
-            hs_proxyManager.prefFolder = hs_proxyManager.prefFolderHome; // Use the Documents preference folder.
-        } else {
-            hs_proxyManager.prefFolder = new Folder(Folder.current.fsName + "/" + "(hs_pref)");
+        hs_proxyManager.userFolder = new Folder("~");
+        if(!hs_proxyManager.userFolder.exists && Folder.myDocuments.parent !== null) {
+            hs_proxyManager.userFolder = Folder.myDocuments.parent;
         }
+        hs_proxyManager.prefFolder = new Folder(hs_proxyManager.userFolder.fsName + "/" + "(hs_pref)");
 
         // Script pref file and proxy path setting file
         hs_proxyManager.prefFileName = "hs_proxyManager.pref";
