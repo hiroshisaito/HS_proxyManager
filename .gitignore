@@ -1,0 +1,4 @@
+# .claude/ is deliberately NOT ignored - it holds the tracked
+# run-hs-proxymanager skill (driver.jsx/runner.ps1/screenshot.ps1), which is
+# project content. Its own .claude/skills/run-hs-proxymanager/.gitignore
+# excludes the regenerated run artifacts (last-run.log, panel-screenshot.png).
